@@ -1,15 +1,15 @@
 {
   "name": "@jupyterlab/services",
-  "version": "0.43.0",
+  "version": "0.44.0",
   "description": "Client APIs for the Jupyter services REST APIs",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "dependencies": {
-    "@jupyterlab/coreutils": "^0.4.0",
-    "@phosphor/algorithm": "^1.0.0",
-    "@phosphor/coreutils": "^1.0.0",
-    "@phosphor/disposable": "^1.0.0",
-    "@phosphor/signaling": "^1.0.0",
+    "@jupyterlab/coreutils": "^0.5.0",
+    "@phosphor/algorithm": "^1.1.0",
+    "@phosphor/coreutils": "^1.1.0",
+    "@phosphor/disposable": "^1.1.0",
+    "@phosphor/signaling": "^1.2.0",
     "@types/minimist": "^1.2.0",
     "@types/text-encoding": "0.0.30",
     "minimist": "^1.2.0",
@@ -26,7 +26,6 @@
     "requirejs": "^2.2.0",
     "rimraf": "^2.5.2",
     "text-encoding": "^0.5.2",
-    "typedoc": "^0.5.0",
     "typescript": "^2.2.1",
     "webpack": "^2.2.1",
     "ws": "^1.1.1",
@@ -39,9 +38,9 @@
     "build": "npm run build:src",
     "test:coverage": "istanbul cover --dir test/coverage _mocha -- --retries 3 test/build/**/*.spec.js test/build/*.spec.js --jupyter-config-data=./test/config.json",
     "test:integration": "cd test && python integration_test.py",
-    "test:devtool": "devtool node_modules/.bin/_mocha -qc test/build/**/*.spec.js test/build*.spec.js --jupyter-config-data=./test/config.json",
-    "test:debug": "mocha test/build/**/*.spec.js test/build*.spec.js  --jupyter-config-data=./test/config.json --debug-brk",
-    "test": "mocha --retries 3 test/build/**/*.spec.js test/build*.spec.js --jupyter-config-data=./test/config.json"
+    "test:devtool": "devtool node_modules/.bin/_mocha -qc ttest/build/**/*.spec.js test/build/*.spec.js --jupyter-config-data=./test/config.json --timeout=50000",
+    "test:debug": "mocha test/build/**/*.spec.js test/build/*.spec.js  --jupyter-config-data=./test/config.json --debug-brk",
+    "test": "mocha --retries 3 test/build/**/*.spec.js test/build/*.spec.js --jupyter-config-data=./test/config.json"
   },
   "repository": {
     "type": "git",

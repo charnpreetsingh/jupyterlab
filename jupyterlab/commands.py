@@ -8,16 +8,14 @@ import json
 import pipes
 import os
 import glob
-from uuid import uuid4
 from os import path as osp
 from os.path import join as pjoin
-from subprocess import check_output, CalledProcessError
+from subprocess import check_output, CalledProcessError, STDOUT
 import shutil
 import sys
 import tarfile
 from jupyter_core.paths import ENV_JUPYTER_PATH
 
-from ._version import __version__
 
 if sys.platform == 'win32':
     from subprocess import list2cmdline
@@ -43,9 +41,11 @@ def run(cmd, **kwargs):
     print('> ' + list2cmdline(cmd))
     kwargs.setdefault('shell', sys.platform == 'win32')
     kwargs.setdefault('env', os.environ)
+    kwargs.setdefault('stderr', STDOUT)
     try:
         return check_output(cmd, **kwargs)
     except CalledProcessError as error:
+        print(error.output)
         raise error
 
 
@@ -69,9 +69,13 @@ def install_extension(extension, app_dir=None):
 
     name = output.decode('utf8').splitlines()[-1]
     data = _read_package(pjoin(target, name))
-    _validate_package(data, extension)
 
-    _ensure_package(app_dir)
+    # Remove the tarball if the package is not an extension.
+    if not _is_extension(data):
+        os.remove(pjoin(target, name))
+        msg = '%s is not a valid JupyterLab extension' % extension
+        raise ValueError(msg)
+
     staging = pjoin(app_dir, 'staging')
     run(['npm', 'install', pjoin(target, name)], cwd=staging)
 
@@ -98,7 +102,10 @@ def link_package(path, app_dir=None):
     is_extension = _is_extension(data)
     if is_extension:
         install_extension(path, app_dir)
-
+    else:
+        msg = ('*** Note: Linking non-extension package "%s" (lacks ' +
+               '`jupyterlab.extension` metadata)')
+        print(msg % data['name'])
     config = _get_build_config(app_dir)
     config.setdefault('linked_packages', dict())
     config['linked_packages'][data['name']] = path
@@ -203,14 +210,14 @@ def clean(app_dir=None):
             shutil.rmtree(target)
 
 
-def build(app_dir=None, name=None, version=None, publicPath=None):
+def build(app_dir=None, name=None, version=None):
     """Build the JupyterLab application."""
     # Set up the build directory.
     app_dir = get_app_dir(app_dir)
     if app_dir == here:
         raise ValueError('Cannot build extensions in the core app')
 
-    _ensure_package(app_dir, name, version, publicPath)
+    _ensure_package(app_dir, name, version)
     staging = pjoin(app_dir, 'staging')
 
     # Make sure packages are installed.
@@ -230,7 +237,7 @@ def build(app_dir=None, name=None, version=None, publicPath=None):
     shutil.copytree(pjoin(staging, 'build'), static)
 
 
-def _ensure_package(app_dir, name='JupyterLab', version=None, publicPath=None):
+def _ensure_package(app_dir, name='JupyterLab', version=None):
     """Make sure the build dir is set up.
     """
     if not os.path.exists(pjoin(app_dir, 'extensions')):
@@ -253,7 +260,7 @@ def _ensure_package(app_dir, name='JupyterLab', version=None, publicPath=None):
         os.makedirs(staging)
 
     for name in ['index.template.js', 'webpack.config.js']:
-        dest = pjoin(staging, name)
+        dest = pjoin(staging, name.replace('.template', ''))
         shutil.copy2(pjoin(here, name), dest)
 
     # Template the package.json file.
@@ -275,10 +282,6 @@ def _ensure_package(app_dir, name='JupyterLab', version=None, publicPath=None):
     if version:
         data['jupyterlab']['version'] = version
 
-    publicPath = publicPath or uuid4().hex
-    if not publicPath.endswith('/'):
-        publicPath += '/'
-    data['jupyterlab']['publicPath'] = publicPath
     data['scripts']['build'] = 'webpack'
 
     pkg_path = pjoin(staging, 'package.json')
@@ -331,6 +334,28 @@ def _get_linked_packages(app_dir=None):
     """
     app_dir = get_app_dir(app_dir)
     config = _get_build_config(app_dir)
+    linked = config.get('linked_packages', dict())
+    dead = []
+    for (name, path) in linked.items():
+        if not os.path.exists(path):
+            dead.append(name)
+
+    if dead:
+        extensions = _get_extensions(app_dir)
+
+    for name in dead:
+        path = linked[name]
+        if name in extensions:
+            uninstall_extension(name)
+            print('**Note: Removing dead linked extension "%s"' % name)
+        else:
+            print('**Note: Removing dead linked package "%s"' % name)
+        del linked[name]
+
+    if dead:
+        config['linked_packages'] = linked
+        _write_build_config(config, app_dir)
+
     return config.get('linked_packages', dict())
 
 

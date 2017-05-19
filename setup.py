@@ -107,7 +107,7 @@ setup_args['cmdclass'] = cmdclass
 setuptools_args = {}
 install_requires = setuptools_args['install_requires'] = [
     'notebook>=4.2.0',
-    'jupyterlab_launcher>=0.2.6'
+    'jupyterlab_launcher>=0.2.8'
 ]
 
 extras_require = setuptools_args['extras_require'] = {
@@ -129,6 +129,7 @@ if 'setuptools' in sys.modules:
         'console_scripts': [
             'jupyter-lab = jupyterlab.labapp:main',
             'jupyter-labextension = jupyterlab.labextensions:main',
+            'jupyter-labhub = jupyterlab.labhubapp:main'
         ]
     }
     setup_args.pop('scripts', None)
